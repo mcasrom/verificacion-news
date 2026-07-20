@@ -1,0 +1,18 @@
+{
+  "name": "verificacion-news",
+  "version": "1.0.0",
+  "description": "Canal pre-verificado de noticias/desinformación - sin IA en decisiones de veracidad",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "run-now": "node src/index.js --run-now",
+    "test-data": "node src/index.js --run-now --test",
+    "migrate": "node src/db/migrate.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "node-fetch": "^3.3.0",
+    "fast-xml-parser": "^4.3.0"
+  },
+  "type": "module"
+}
