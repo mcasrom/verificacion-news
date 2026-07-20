@@ -1,4 +1,6 @@
 import fetch from 'node-fetch';
+import { readFileSync } from 'fs';
+import { generateCard } from './cardgen.js';
 
 const TELEGRAM_API = 'https://api.telegram.org';
 
@@ -7,151 +9,127 @@ export async function publishToChannel(botToken, channelId, topics) {
     console.error('[Telegram] Missing bot token or channel ID');
     return [];
   }
-  
+
   const published = [];
-  
+
   for (const topic of topics) {
     try {
-      const message = formatMessage(topic);
-      
-      let response;
-      
+      const message = formatCaption(topic);
+      let photoBuffer;
+      let filename;
+
       if (topic.image_url) {
-        response = await fetch(`${TELEGRAM_API}/bot${botToken}/sendPhoto`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: channelId,
-            photo: topic.image_url,
-            caption: message,
-            parse_mode: 'HTML'
-          })
-        });
-      } else {
-        response = await fetch(`${TELEGRAM_API}/bot${botToken}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: channelId,
-            text: message,
-            parse_mode: 'HTML',
-            disable_web_page_preview: false
-          })
-        });
+        try {
+          const imgResp = await fetch(topic.image_url, { signal: AbortSignal.timeout(6000) });
+          if (imgResp.ok) {
+            photoBuffer = Buffer.from(await imgResp.arrayBuffer());
+            filename = 'image.jpg';
+          }
+        } catch (e) {
+          photoBuffer = null;
+        }
       }
-      
-      if (response.ok) {
+
+      if (!photoBuffer) {
+        const cardPath = generateCard(topic);
+        if (cardPath) {
+          photoBuffer = readFileSync(cardPath);
+          filename = 'card.png';
+        }
+      }
+
+      if (!photoBuffer) {
+        console.warn('[Telegram] No image for #' + topic.id + ', skip');
+        continue;
+      }
+
+      const form = new FormData();
+      form.append('chat_id', channelId);
+      form.append('photo', new Blob([photoBuffer], { type: 'image/png' }), filename);
+      form.append('caption', message);
+      form.append('parse_mode', 'HTML');
+
+      const resp = await fetch(TELEGRAM_API + '/bot' + botToken + '/sendPhoto', {
+        method: 'POST',
+        body: form
+      });
+
+      if (resp.ok) {
         published.push(topic.id);
-        console.log(`[Telegram] Published: ${topic.headline.slice(0, 50)}...`);
+        const hl = (topic.improved_headline || topic.headline || '').slice(0, 50);
+        console.log('[Telegram] OK: ' + hl + '...');
       } else {
-        const err = await response.json();
-        console.error(`[Telegram] Error:`, err.description);
+        const err = await resp.json();
+        console.error('[Telegram] Error:', err.description);
       }
-      
-      await sleep(1000);
-      
+
+      await sleep(1500);
     } catch (e) {
-      console.error(`[Telegram] Error publishing:`, e.message);
+      console.error('[Telegram] Error:', e.message);
     }
   }
-  
+
   return published;
 }
 
-function formatMessage(topic) {
-  const verdictEmoji = {
-    'false': '🔴',
-    'true': '🟢',
-    'misleading': '🟡',
-    'unverified': '⚪'
-  };
-  
-  const verdictText = {
-    'false': 'FALSO',
-    'true': 'VERIFICADO',
-    'misleading': 'ENGAÑOSO',
-    'unverified': 'SIN VERIFICAR'
-  };
-  
-  const emoji = verdictEmoji[topic.factcheck_verdict] || '⚪';
-  const verdict = verdictText[topic.factcheck_verdict] || 'SIN VERIFICAR';
-  
-  let msg = `\n┌─────────────────────────────┐\n`;
-  msg += `│  ${emoji} <b>${verdict}</b>\n`;
-  msg += `└─────────────────────────────┘\n\n`;
-  
-  msg += `<b>${topic.headline}</b>\n\n`;
-  
-  if (topic.summary && topic.summary !== topic.headline) {
-    msg += `📝 <i>${topic.summary.slice(0, 180)}</i>\n\n`;
+function formatCaption(topic) {
+  const s = {
+    'false': { e: '\uD83D\uDD34', t: 'FALSO' },
+    'true': { e: '\uD83D\uDFE2', t: 'VERIFICADO' },
+    'misleading': { e: '\uD83D\uDFE1', t: 'ENGA\u00d1OSO' },
+    'unverified': { e: '\u26AA', t: 'SIN VERIFICAR' }
+  }[topic.factcheck_verdict] || { e: '\u26AA', t: 'SIN VERIFICAR' };
+
+  const headline = (topic.improved_headline || topic.headline || '');
+  const summary = (topic.improved_summary || topic.summary || '');
+  const safeSummary = cleanSummary(summary, topic.sources_count || 0);
+
+  let msg = s.e + ' <b>' + s.t + '</b>\n\n<b>' + headline + '</b>\n';
+  if (safeSummary && safeSummary !== headline) {
+    msg += '\n' + safeSummary + '\n';
   }
-  
   if (topic.factcheck_source) {
-    msg += `✅ Verificado por: <b>${topic.factcheck_source}</b>\n`;
+    msg += '\n\u2705 <b>' + topic.factcheck_source + '</b>';
   }
-  
   if (topic.factcheck_url) {
-    msg += `🔗 Verificación: ${topic.factcheck_url}\n`;
+    msg += '\n\uD83D\uDD17 ' + topic.factcheck_url;
   }
-  
   if (topic.article_link) {
-    msg += `📰 Leer noticia: ${topic.article_link}\n`;
+    msg += '\n\uD83D\uDCF0 ' + topic.article_link;
   }
-  
-  msg += `\n┌─────────────────────────────┐\n`;
-  msg += `│  📊 <b>${topic.sources_count} fuentes</b>`;
-  
-  if (topic.source_names) {
-    msg += ` │ ${topic.source_names.split(',').slice(0, 3).join(', ')}`;
-  }
-  
-  msg += `\n└─────────────────────────────┘\n`;
-  
-  const hashtags = generateHashtags(topic);
-  if (hashtags) {
-    msg += `\n${hashtags}`;
-  }
-  
-  msg += `\n\n<i>@newsradarverifica</i>`;
-  
+  msg += '\n\n\uD83D\uDCCA <b>' + (topic.sources_count || 1) + ' fuentes</b>';
+
+  const tags = hashtags(topic);
+  if (tags) msg += '\n\n' + tags;
   return msg;
 }
 
-function generateHashtags(topic) {
+function cleanSummary(summary, realCount) {
+  if (!summary) return '';
+  // Remove any reference to inflated source counts
+  return summary.replace(/\d[\d,.]* fuentes?/gi, realCount + ' fuentes');
+}
+
+function hashtags(topic) {
   const tags = new Set();
-  
-  if (topic.country && topic.country !== 'global') {
-    const countryTags = {
-      'US': '#USA', 'ES': '#España', 'UK': '#UK', 'FR': '#Francia',
-      'DE': '#Alemania', 'IT': '#Italia', 'RU': '#Rusia', 'CN': '#China',
-      'UA': '#Ucrania', 'IL': '#Israel', 'PS': '#Palestina', 'MX': '#México',
-      'AR': '#Argentina', 'CO': '#Colombia', 'VE': '#Venezuela', 'BR': '#Brasil'
-    };
-    if (countryTags[topic.country]) tags.add(countryTags[topic.country]);
-  }
-  
-  const headline = (topic.headline || '').toLowerCase();
-  
-  if (headline.includes('trump') || headline.includes('eeuu') || headline.includes('united states')) tags.add('#Trump');
-  if (headline.includes('guerra') || headline.includes('war') || headline.includes('militar')) tags.add('#Guerra');
-  if (headline.includes('elecc') || headline.includes('president') || headline.includes('gobierno')) tags.add('#Política');
-  if (headline.includes('econom') || headline.includes('mercado') || headline.includes('dólar')) tags.add('#Economía');
-  if (headline.includes('salud') || headline.includes('virus') || headline.includes('covid')) tags.add('#Salud');
-  if (headline.includes('clima') || headline.includes('climate')) tags.add('#Clima');
-  if (headline.includes('fútbol') || headline.includes('mundial') || headline.includes('world cup')) tags.add('#Fútbol');
-  if (headline.includes('irán') || headline.includes('iran')) tags.add('#Irán');
-  if (headline.includes('israel') || headline.includes('gaza') || headline.includes('palestina')) tags.add('#OrienteMedio');
-  
-  if (topic.topic_category === 'politica') tags.add('#Política');
-  if (topic.topic_category === 'economia') tags.add('#Economía');
-  if (topic.topic_category === 'salud') tags.add('#Salud');
-  if (topic.topic_category === 'seguridad') tags.add('#Seguridad');
-  
+  const text = ((topic.improved_headline || topic.headline || '') + ' ' + (topic.improved_summary || topic.summary || '')).toLowerCase();
+
+  const ct = { 'US': '#USA', 'ES': '#Espa\u00f1a', 'UK': '#UK', 'FR': '#Francia', 'DE': '#Alemania',
+    'RU': '#Rusia', 'CN': '#China', 'UA': '#Ucrania', 'IL': '#Israel', 'PS': '#Palestina',
+    'MX': '#M\u00e9xico', 'AR': '#Argentina', 'CO': '#Colombia', 'VE': '#Venezuela', 'BR': '#Brasil' };
+  if (topic.country && ct[topic.country]) tags.add(ct[topic.country]);
+
+  if (text.includes('guerra') || text.includes('militar')) tags.add('#Guerra');
+  if (/(eleccion|presidente|gobierno|voto|pol.ti)/i.test(text)) tags.add('#Pol\u00edtica');
+  if (/(econom|inflacion|d.lar|mercado)/i.test(text)) tags.add('#Econom\u00eda');
+  if (/(salud|virus|covid|hospital)/i.test(text)) tags.add('#Salud');
+  if (/(clima|inundacion|terremoto|hurac.n)/i.test(text)) tags.add('#Clima');
+  if (/(israel|gaza|palestina|hamas)/i.test(text)) tags.add('#OrienteMedio');
+
   tags.add('#Verificado');
-  
-  return [...tags].slice(0, 6).join(' ');
+  return [...tags].slice(0, 5).join(' ');
 }
 
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(r => setTimeout(r, ms));
 }

@@ -2,68 +2,75 @@ import fetch from 'node-fetch';
 import { XMLParser } from 'fast-xml-parser';
 
 const RSS_FEEDS = [
-  // Agencias internacionales (confiables) - todos HTTPS
+{ name: 'Infodefensa', url: 'https://www.infodefensa.com/feed/all', category: 'defensa' },
   { name: 'BBC World', url: 'https://feeds.bbci.co.uk/news/world/rss.xml', category: 'agencia' },
   { name: 'BBC Mundo', url: 'https://feeds.bbci.co.uk/mundo/topics/c7zp57yyz25t/rss.xml', category: 'agencia' },
   { name: 'Al Jazeera', url: 'https://www.aljazeera.com/xml/rss/all.xml', category: 'agencia' },
   { name: 'DW News', url: 'https://rss.dw.com/rdf/rss-en-all', category: 'agencia' },
   { name: 'France24', url: 'https://www.france24.com/en/rss', category: 'agencia' },
-  
-  // España
   { name: 'El País', url: 'https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada', category: 'espanol' },
   { name: 'El Mundo', url: 'https://e00-elmundo.uecdn.es/elmundo/rss/portada.xml', category: 'espanol' },
   { name: 'La Vanguardia', url: 'https://www.lavanguardia.com/rss/feed5022031.xml', category: 'espanol' },
-  
-  // América Latina
   { name: 'Clarín', url: 'https://www.clarin.com/rss/lo-ultimo/', category: 'latam' },
   { name: 'El Universal MX', url: 'https://www.eluniversal.com.mx/rss.xml', category: 'latam' },
-  
-  // Alternativos/Estados Unidos
   { name: 'NPR World', url: 'https://feeds.npr.org/1004/rss.xml', category: 'generalista' },
   { name: 'The Guardian', url: 'https://www.theguardian.com/world/rss', category: 'generalista' },
 ];
 
-const parser = new XMLParser({ ignoreAttributes: false, isArray: (name) => name === 'item' });
+function decodeXMLNumericEntities(text) {
+  return text.replace(/&#x?[0-9a-fA-F]+;/g, (match) => {
+    try {
+      const hex = match.startsWith('&#x');
+      const code = hex ? parseInt(match.slice(3, -1), 16) : parseInt(match.slice(2, -1), 10);
+      return String.fromCodePoint(code);
+    } catch {
+      return ' ';
+    }
+  });
+}
+
+const parser = new XMLParser({
+  ignoreAttributes: false,
+  isArray: (name) => name === 'item' || name === 'entry',
+  processEntities: false,
+  stopNodes: ["*"] // Avoid entity expansion limit
+});
 
 export async function fetchRSS() {
   const allItems = [];
-  
   const feedPromises = RSS_FEEDS.map(async (feed) => {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 20000);
-      
-      const response = await fetch(feed.url, { 
+
+      const response = await fetch(feed.url, {
         signal: controller.signal,
         redirect: 'follow',
-        headers: { 
+        headers: {
           'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
           'Accept': 'application/rss+xml, application/xml, text/xml, */*'
         }
       });
       clearTimeout(timeout);
-      
+
       if (!response.ok) return [];
-      
-      const text = await response.text();
+
+      let text = await response.text();
+      text = stripXMLEntities(text);
       const parsed = parser.parse(text);
-      
+
       let items = [];
       if (parsed.rss?.channel?.item) {
-        items = parsed.rss.channel.item;
+        items = Array.isArray(parsed.rss.channel.item) ? parsed.rss.channel.item : [parsed.rss.channel.item];
       } else if (parsed.feed?.entry) {
-        items = Array.isArray(parsed.feed.entry) 
-          ? parsed.feed.entry 
-          : [parsed.feed.entry];
+        items = Array.isArray(parsed.feed.entry) ? parsed.feed.entry : [parsed.feed.entry];
       }
-      
-      return items.slice(0, 20).map(item => {
-        // Handle different RSS formats
-        const title = item.title?._text || item.title || '';
+
+      return items.slice(0, 25).map(item => {
+        const title = item.title?._text || item.title?.['#text'] || item.title || '';
         const link = item.link?.['@_href'] || item.link?._text || item.link || '';
         const desc = item.description?._text || item.description || item.summary || '';
-        
-        // Extract image from various RSS formats
+
         let image = null;
         if (item['media:content']?.['@_url']) {
           image = item['media:content']['@_url'];
@@ -77,7 +84,7 @@ export async function fetchRSS() {
             image = group['media:content']['@_url'];
           }
         }
-        
+
         return {
           source: feed.name,
           category: feed.category,
@@ -88,57 +95,19 @@ export async function fetchRSS() {
           image: image || null
         };
       });
-      
     } catch (e) {
       console.error(`[RSS] Error fetching ${feed.name}:`, e.message);
       return [];
     }
   });
-  
+
   const results = await Promise.all(feedPromises);
   return results.flat();
 }
 
-export function matchHeadlines(rssItems) {
-  const matched = [];
-  
-  for (const item of rssItems) {
-    if (!item.title) continue;
-    
-    const similar = rssItems.filter(other => 
-      other.source !== item.source && 
-      other.title &&
-      calculateSimilarity(item.title, other.title) > 0.3
-    );
-    
-    if (similar.length >= 2) {
-      matched.push({
-        headline: item.title,
-        sources: [item.source, ...similar.map(s => s.source)],
-        category: item.category,
-        link: item.link
-      });
-    }
-  }
-  
-  return matched;
-}
-
-function calculateSimilarity(a, b) {
-  const wordsA = a.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-  const wordsB = new Set(b.toLowerCase().split(/\s+/).filter(w => w.length > 3));
-  
-  let matches = 0;
-  for (const word of wordsA) {
-    if (wordsB.has(word)) matches++;
-  }
-  
-  return matches / Math.max(wordsA.length, 1);
-}
-
 export function detectRSSTrending(rssItems) {
   const STOP_WORDS = new Set(['the','and','for','that','with','this','from','have','are','was','were','been','has','its','not','but','can','will','into','over','after','says','new','two','may','first','last','year','time','people','world','city','state','country','government','president','minister','official','according','report']);
-  
+
   const headlines = rssItems
     .filter(item => item.title && item.title.length > 15)
     .map(item => ({
@@ -150,43 +119,43 @@ export function detectRSSTrending(rssItems) {
           .filter(w => w.length > 3 && !STOP_WORDS.has(w))
       )
     }));
-  
+
   const groups = [];
   const used = new Set();
-  
+
   for (let i = 0; i < headlines.length; i++) {
     if (used.has(i)) continue;
-    
+
     const group = [headlines[i]];
     used.add(i);
-    
+
     for (let j = i + 1; j < headlines.length; j++) {
       if (used.has(j)) continue;
-      
+
       const overlap = [...headlines[i].words].filter(w => headlines[j].words.has(w)).length;
       const minWords = Math.min(headlines[i].words.size, headlines[j].words.size);
-      
+
       if (minWords > 0 && overlap / minWords > 0.4) {
         group.push(headlines[j]);
         used.add(j);
       }
     }
-    
+
     if (group.length >= 2) {
       const sources = new Set(group.map(g => g.source));
       const best = group.sort((a, b) => b.title.length - a.title.length)[0];
-      
+
       groups.push({
         theme: best.title,
-        summary: group.length > 2 
-          ? `${group.length} medios cubren: ${best.title}` 
+        summary: group.length > 2
+          ? `${group.length} medios cubren: ${best.title}`
           : group.map(g => `${g.source}: ${g.title}`).join(' | '),
         count: group.length,
         uniqueSources: sources.size,
         score: group.length * sources.size,
-        relatedItems: group.map(g => ({ 
-          title: g.title, 
-          source: g.source, 
+        relatedItems: group.map(g => ({
+          title: g.title,
+          source: g.source,
           link: g.link,
           description: g.description || '',
           image: g.image || null
@@ -197,6 +166,14 @@ export function detectRSSTrending(rssItems) {
       });
     }
   }
-  
+
   return groups.sort((a, b) => b.score - a.score).slice(0, 15);
+}
+
+function stripXMLEntities(text) {
+  // Remove all entity references before XML parsing
+  return text
+    .replace(/&#x?[0-9a-fA-F]+;/g, ' ')
+    .replace(/&[a-zA-Z]+;/g, ' ')
+    .replace(/&(?![a-zA-Z])/g, ' ');
 }

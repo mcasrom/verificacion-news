@@ -1,91 +1,72 @@
-# WayAhead - Evolution Log
+# WayAhead — NewsRadar Verifica
 
-## Sprint 0 - Project Setup (2026-07-20)
+## Estado Actual (2026-07-20)
 
-### Created
-- Project structure: `~/verificacion_news`
-- SQLite schema with dedup by hash
-- GDELT GKG integration (trending detection)
-- RSS aggregator (12 feeds: Reuters, AP, BBC, CNN, Al Jazeera, DW, France24, El País, El Mundo, BBC Mundo, RT, Fox)
+### Infrastructure
+- **Server**: Hetzner NBG1 (4GB RAM, 38GB SSD), Nürnberg
+- **PM2**: 3 procesos newsradar + 11 existentes intactos
+- **Cron**: Cada hora (0 * * * *)
+- **Web**: viajeinteligencia.com/verifica/ via Nginx + Cloudflare
+
+### Pipeline
+```
+RSS (13 feeds, ~250 items) ─┐
+                              ├── detectTrending → verify → Groq → Telegram
+GDELT GKG (~13k records) ────┘
+```
+
+### RSS Feeds (13 activos)
+BBC World, BBC Mundo, Al Jazeera, France24, DW News, El País, El Mundo, ABC España, Clarín, The Guardian, NPR World, Infodefensa
+
+### Verification
+- **Google Fact Check API** — gratis, cobertura limitada
+- **Cross-reference histórico** — detecta reincidencias en DB
+- **Señales de riesgo mecánicas** — diversidad fuentes, astroturfing, sesgo, cobertura GDELT
+- **Groq (Llama 3.1)** — mejora contenido + análisis de coherencia entre fuentes (sin decidir verdad)
+
+### Web Frontend
+- Express + SQLite readonly + SPA vanilla
+- Stats KPIs + topic list con filtros (país, categoría, días)
+- Tabs: Verificaciones / Metodología / Fuentes
+- Tema claro/oscuro con persistencia
+- Favicon SVG + OG preview para RRSS
+- API REST: /api/stats, /api/topics, /api/topics/:id
+
+### Telegram
+- **Bot**: @newsradar_verifica_bot
+- **Canal**: @newsradarverificabot
+- Pin con leyenda de veredictos
+- Resumen semanal (domingos 12:00)
+- Card generator SVG→PNG para posts sin imagen
+
+### Changelog
+
+#### v1.0.0 — Initial scaffold
+- db.js, gdelt.js, rss.js, factcheck.js, verify.js, telegram.js, index.js
+
+#### v1.1.0 — RSS + GDELT working
+- RSS: 13 feeds con entity expansion fix
+- GDELT: .gkg.csv.zip daily parser (13k+ records)
+- DetectRSSTrending: word overlap clustering
+
+#### v1.2.0 — Telegram + FactCheck
 - Google Fact Check API integration
-- Telegram publisher (canal público)
-- No IA in truth decisions - only data from verified sources
+- Telegram channel publishing
+- Risk signals: astroturfing, source bias, GDELT cross-ref
 
-### Architecture Decisions
-- **No LLM for verification** - LLMs hallucinate; fact-checking must be 100% traceable to real sources
-- **Risk signals, not verdicts** - Bot reports status (verified/false/unverified), never "dictates truth"
-- **Hash dedup** - SHA256 of normalized headline to avoid duplicates
+#### v1.3.0 — Cron + Deploy
+- PM2 en Hetzner, cron cada 15min → cada hora
+- 11 PM2 procesos existentes intactos
 
-### Pending
-- [ ] Get Fact Check API key from Google Cloud Console
-- [ ] Create Telegram bot via @BotFather
-- [x] Test with real data - **RSS funciona, GDELT pendiente**
-- [ ] Deploy to Hetzner with PM2
-- [ ] Cron activation after testing
-
-### What Works (2026-07-20)
-- RSS fetch: BBC World + BBC Mundo + Al Jazeera responden (60 items)
-- Trending detection: agrupa por keywords, detecta temas repetidos
-- SQLite storage: dedup por hash, temas guardados en primer ciclo
-- FactCheck API: funciona, verificó 6 temas en primer ciclo
-- Telegram publisher: **FUNCIONANDO** - 5 mensajes publicados en canal
-- Canal: @NewsRadarVerifica activo con bot administrador
-- **Cron: PM2 activo, cada 15 minutos**
-
-### Known Issues
-- RSS feeds: solo 3 de 12 funcionan (timeout los demás)
-- GDELT: formato de archivos diarios (`.gkg.csv.zip`), no horarios como coded
-- Trending: keywords sueltas ("Killed", "What") en vez de temas agrupados
-- Sin FactCheck API key = sin verificación real
-- Sin Telegram bot = sin publicación
-
----
-
-## Future Sprints
-
-### Sprint 1 - Deploy & Test
-- Deploy to Hetzner
-- Configure Nginx
-- Test full cycle with real feeds
-- Set up PM2
-
-### Sprint 2 - Premium Bot
-- Telegram bot premium (suscripción)
-- Filter by country/topic
-- Historical queries
-
-### Sprint 3 - API/B2B
-- REST API for programmatic access
-- Metered billing (Stripe)
-
----
-
-## Changelog
-
-### 2026-07-20
-- **v1.0.0** - Initial scaffold created
-  - db.js: SQLite with topics table
-  - sources/gdelt.js: GDELT GKG parser
-  - sources/rss.js: RSS aggregator
-  - sources/factcheck.js: Google Fact Check API
-  - verify.js: trending detection + risk assessment
-  - telegram.js: channel publisher
-  - index.js: main orchestrator + cron loop
-
-- **v1.1.0** - First working cycle
-  - Fixed RSS: all HTTPS, 20s timeout, redirect follow
-  - Fixed GDELT: HTTP (SSL cert mismatch with CDN)
-  - Added `detectRSSTrending()`: keyword frequency analysis
-  - Added `--test` flag for offline dev with testdata.js
-  - 9 trending topics stored in SQLite from real BBC data
-
-- **v1.2.0** - Telegram integration working
-  - FactCheck API: fixed languageCode (en), 6 topics verified
-  - Telegram bot: @newsradar_verifica_bot
-  - Channel: @NewsRadarVerifica
-  - 5 messages published to Telegram in first cycle
-
-- **v1.3.0** - Cron activated
-  - PM2 with cron: */15 * * * *
-  - Automatic cycles every 15 minutes
-  - Running on laptop
+#### v1.4.0 — Groq + Web
+- Groq content improvement (no verification)
+- Groq coherence analysis
+- Cross-reference histórico (reincidencias)
+- Web frontend (Express + SPA)
+- Nginx reverse proxy
+- Card generator SVG→PNG
+- Infodefensa (defensa/geopolítica)
+- Favicon + OG preview + Meta tags
+- Tema claro/oscuro
+- Filtro temporal (7d/24h/Todo)
+- Pin del canal + resumen semanal

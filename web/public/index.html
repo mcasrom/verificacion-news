@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NewsRadar Verifica</title>
+<meta name="description" content="Verificación automática de noticias. BBC, Al Jazeera, France24, GDELT, Google Fact Check. Sin IA en veredictos.">
+<meta property="og:title" content="NewsRadar Verifica">
+<meta property="og:description" content="Verificación automática de noticias. 13 fuentes RSS + GDELT + Google Fact Check. Sin IA en veredictos.">
+<meta property="og:image" content="https://viajeinteligencia.com/verifica/og-preview.svg">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="NewsRadar Verifica">
+<meta name="twitter:description" content="Verificación automática de noticias. Sin IA en veredictos.">
+<meta name="twitter:image" content="https://viajeinteligencia.com/verifica/og-preview.svg">
+<link rel="icon" type="image/svg+xml" href="/verifica/favicon.svg">
+<link rel="shortcut icon" href="/verifica/favicon.svg">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+
+:root{--bg:#070712;--bg2:#0f0f24;--bg3:#12122a;--border:#1e1e3a;--text:#e0e0e0;--text2:#888;--text3:#555;--accent:#e94560}
+.light{--bg:#c0c0c0;--bg2:#d4d4d4;--bg3:#c8c8c8;--border:#999;--text:#1a1a1a;--text2:#555;--text3:#777;--accent:#b71c1c}
+body{background:var(--bg);color:var(--text);transition:background .3s,color .3s}
+
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+::selection{background:var(--accent);color:#fff}
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at 20% 50%,var(--bg)15 0%,transparent 50%),radial-gradient(ellipse at 80% 20%,var(--accent)08 0%,transparent 50%);pointer-events:none;z-index:0}
+.container{max-width:1100px;margin:0 auto;padding:24px;position:relative;z-index:1}
+.header{text-align:center;padding:50px 0 20px}
+.header .logo{font-size:36px;font-weight:800;letter-spacing:5px;background:linear-gradient(135deg,var(--accent),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.header .sub{color:var(--text3);font-size:12px;letter-spacing:2px;text-transform:uppercase}
+.header .desc{color:var(--text2);font-size:13px;max-width:600px;margin:12px auto 0;line-height:1.5}
+.header .badge{display:inline-block;background:var(--accent)15;border:1px solid var(--accent)33;color:var(--accent);padding:5px 16px;border-radius:20px;font-size:11px;font-weight:600;margin-top:12px}
+.tabs{display:flex;gap:4px;margin:30px 0 20px;border-bottom:1px solid var(--border);justify-content:center}
+.tab{background:none;border:none;color:var(--text3);padding:10px 24px;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:24px}
+.stat-card{background:linear-gradient(145deg,var(--bg2),var(--bg3));border-radius:14px;padding:20px;text-align:center;border:1px solid var(--border);position:relative;overflow:hidden}
+.stat-card .glow{position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle,var(--c) 0%,transparent 60%);opacity:.05}
+.stat-card .num{font-size:28px;font-weight:800;color:var(--c);line-height:1}
+.stat-card .label{font-size:10px;color:var(--text3);margin-top:6px;font-weight:600;text-transform:uppercase;letter-spacing:1px}
+.filters{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.filters input,.filters select{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif}
+.filters input{flex:1;min-width:200px}
+.filters input:focus,.filters select:focus{outline:none;border-color:var(--accent)}
+.filters select{min-width:120px;cursor:pointer}
+.verdict{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:16px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.verdict-true{background:#2ecc7120;color:#2ecc71;border:1px solid #2ecc7130}
+.verdict-false{background:var(--accent)20;color:var(--accent);border:1px solid var(--accent)30}
+.verdict-misleading{background:#f39c1220;color:#f39c12;border:1px solid #f39c1230}
+.verdict-unverified{background:var(--text3)55520;color:#888;border:1px solid var(--text3)55530}
+.verdict .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.topic-list{display:grid;gap:12px}
+.topic-card{background:linear-gradient(145deg,var(--bg2),var(--bg3));border-radius:14px;padding:18px 20px;border:1px solid var(--border);transition:all .2s}
+.topic-card:hover{border-color:var(--border);transform:translateX(2px)}
+.topic-card .top{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.topic-card .meta{font-size:11px;color:var(--text3)}
+.topic-card .meta .sep{margin:0 6px;color:var(--text3)}
+.topic-card h3{font-size:16px;font-weight:600;line-height:1.4;margin-bottom:4px;color:var(--text)}
+.topic-card .desc{font-size:13px;color:var(--text2);line-height:1.4;margin-bottom:8px}
+.topic-card .bottom{display:flex;gap:6px;flex-wrap:wrap}
+.topic-card .tag{background:var(--bg2);padding:3px 8px;border-radius:6px;font-size:10px;color:var(--text3)}
+.topic-card .tag a{color:var(--text2);text-decoration:none}
+.topic-card .tag a:hover{color:var(--accent)}
+.info-section{background:linear-gradient(145deg,var(--bg2),var(--bg3));border-radius:14px;padding:28px;border:1px solid var(--border);margin-bottom:16px}
+.info-section h2{font-size:18px;font-weight:700;color:var(--accent);margin-bottom:12px}
+.info-section h3{font-size:14px;font-weight:600;color:var(--text);margin:16px 0 8px}
+.info-section p{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:8px}
+.info-section ul{list-style:none;padding:0;font-size:13px;color:var(--text2);line-height:1.8}
+.info-section ul li::before{content: '→ ';color:var(--accent)}
+.info-section .source-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:8px}
+.info-section .source-item{background:var(--bg2);border-radius:8px;padding:10px 14px;border:1px solid var(--border);font-size:12px}
+.info-section .source-item .name{color:var(--text);font-weight:600}
+.info-section .source-item .cat{color:var(--text3);font-size:10px;margin-top:2px}
+.pagination{display:flex;justify-content:center;gap:6px;margin:30px 0;flex-wrap:wrap}
+.pagination button{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text);cursor:pointer;font-size:13px;font-family:'Inter',sans-serif}
+.pagination button:hover{border-color:var(--accent);color:var(--accent)}
+.pagination button.active{background:var(--accent)15;border-color:var(--accent);color:var(--accent)}
+.pagination button:disabled{opacity:.2;cursor:default}
+.loading{text-align:center;padding:60px 0;color:var(--text3)}
+.loading .spinner{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.footer{text-align:center;padding:40px 0 20px;color:var(--text3);font-size:12px}
+.footer a{color:var(--text3);text-decoration:none}
+.footer a:hover{color:var(--accent)}
+@media(max-width:640px){
+  .container{padding:16px}
+  .header{padding:30px 0}
+  .header .logo{font-size:26px}
+  .stats{grid-template-columns:repeat(3,1fr);gap:8px}
+  .stat-card{padding:14px}
+  .stat-card .num{font-size:22px}
+  .topic-card h3{font-size:14px}
+  .info-section{padding:18px}
+}
+</style>
+</head>
+<body>
+<div class="container" id="app">
+  <div class="header">
+    <div class="logo">NEWSRADAR</div>
+    <div class="sub">VERIFICACI&Oacute;N AUTOM&Aacute;TICA DE NOTICIAS</div>
+    <div class="desc">Analizamos m&aacute;s de 13.000 fuentes globales cada hora y cruzamos con fact-checkers para detectar desinformaci&oacute;n. Sin IA en decisiones de veracidad.</div>
+    <div class="badge">BBC &middot; Al Jazeera &middot; France24 &middot; DW &middot; El Pa&iacute;s &middot; The Guardian &middot; Infodefensa &middot; AFP &middot; Google Fact Check</div>
+  </div>
+
+<div style="text-align:center;margin-top:12px"><button onclick="toggleTheme()" style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:6px 16px;color:var(--text);font-size:12px;cursor:pointer;font-family:Inter,sans-serif">☾ Cambiar tema</button></div>
+
+  <div class="tabs">
+    <button class="tab active" id="tabBtn-verifica" onclick="switchTab('verifica')">Verificaciones</button>
+    <button class="tab" id="tabBtn-metodologia" onclick="switchTab('metodologia')">Metodolog&iacute;a</button>
+    <button class="tab" id="tabBtn-fuentes" onclick="switchTab('fuentes')">Fuentes</button>
+  </div>
+
+  <div id="tab-verifica" class="tab-content active">
+    <div class="stats" id="stats">
+      <div class="stat-card" style="--c:#e94560"><div class="glow"></div><div class="num"><span id="stTotal">-</span></div><div class="label">Total analizados</div></div>
+      <div class="stat-card" style="--c:#2ecc71"><div class="glow"></div><div class="num"><span id="stTrue">-</span></div><div class="label">Confirmados</div></div>
+      <div class="stat-card" style="--c:#e94560"><div class="glow"></div><div class="num"><span id="stFalse">-</span></div><div class="label">Desmentidos</div></div>
+      <div class="stat-card" style="--c:#f39c12"><div class="glow"></div><div class="num"><span id="stMis">-</span></div><div class="label">Dudosos</div></div>
+      <div class="stat-card" style="--c:#888"><div class="glow"></div><div class="num"><span id="stPub">-</span><span style="font-size:16px;opacity:.6"> / <span id="stTotal2">-</span></span></div><div class="label">Publicados</div></div>
+    </div>
+    <div class="filters">
+      <input type="text" id="search" placeholder="Buscar tema..." oninput="load(1)">
+      <select id="fCountry" onchange="load(1)"><option value="">Todos los pa&iacute;ses</option></select>
+      <select id="fCat" onchange="load(1)"><option value="">Todas las categor&iacute;as</option></select>
+      <select id="fTime" onchange="load(1)" style="min-width:90px"><option value="7">7 dias</option><option value="1">24h</option><option value="0">Todo</option></select>
+    </div>
+    <div id="list"><div class="loading"><div class="spinner"></div>Cargando verificaciones...</div></div>
+    <div class="pagination" id="pages"></div>
+  </div>
+
+  <div id="tab-metodologia" class="tab-content">
+    <div class="info-section">
+      <h2>C&oacute;mo funciona</h2>
+      <p>NewsRadar Verifica es un sistema automatizado de an&aacute;lisis de cobertura medi&aacute;tica. No decide si una noticia es verdadera o falsa: cruza fuentes y detecta patrones.</p>
+      <h3>Proceso</h3>
+      <ul>
+        <li>Cada hora se recogen ~250 art&iacute;culos de 13 fuentes RSS internacionales</li>
+        <li>Se analizan 13.000+ registros de GDELT (monitor global de medios)</li>
+        <li>Los titulares se agrupan por similitud sem&aacute;ntica para detectar trending topics</li>
+        <li>Cada tema se cruza con Google Fact Check API para ver si ya fue verificado</li>
+        <li>Se aplican se&ntilde;ales de riesgo mec&aacute;nicas: diversidad de fuentes, contradicciones, cobertura</li>
+        <li>Groq (Llama 3.1) analiza diferencias de framing entre fuentes sin decidir verdad</li>
+      </ul>
+      <h3>Se&ntilde;ales de riesgo</h3>
+      <ul>
+        <li><b>SINDICACI&Oacute;N MASIVA</b> &mdash; M&uacute;ltiples fuentes con titular casi id&eacute;ntico</li>
+        <li><b>SESGO DE FUENTE</b> &mdash; Toda la cobertura viene del mismo tipo de medio</li>
+        <li><b>TENDENCIA DIGITAL</b> &mdash; Fuerte en GDELT pero sin cobertura en medios tradicionales</li>
+        <li><b>REINCIDENTE</b> &mdash; Mismo patr&oacute;n que un tema ya desmentido antes</li>
+        <li><b>COBERTURA MIXTA</b> &mdash; Diferentes l&iacute;neas editoriales lo cubren de forma distinta</li>
+      </ul>
+      <h3>Veredictos</h3>
+      <ul>
+        <li><span style="color:#2ecc71">VERIFICADO</span> &mdash; Google Fact Check confirm&oacute; la informaci&oacute;n</li>
+        <li><span style="color:#e94560">FALSO</span> &mdash; Google Fact Check encontr&oacute; un desmentido</li>
+        <li><span style="color:#f39c12">ENGA&NtilDE;OSO</span> &mdash; Contiene informaci&oacute;n enga&ntilde;osa seg&uacute;n verificadores</li>
+        <li><span style="color:#888">SIN VERIFICAR</span> &mdash; No hay verificaci&oacute;n externa disponible</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="tab-fuentes" class="tab-content">
+    <div class="info-section">
+      <h2>Fuentes de informaci&oacute;n</h2>
+      <p>Usamos medios con est&aacute;ndares editoriales conocidos y agencias internacionales.</p>
+      <div class="source-list">
+        <div class="source-item"><div class="name">BBC World</div><div class="cat">Agencia internacional</div></div>
+        <div class="source-item"><div class="name">BBC Mundo</div><div class="cat">Agencia internacional</div></div>
+        <div class="source-item"><div class="name">Al Jazeera</div><div class="cat">Agencia internacional</div></div>
+        <div class="source-item"><div class="name">France24</div><div class="cat">Agencia internacional</div></div>
+        <div class="source-item"><div class="name">DW News</div><div class="cat">Agencia internacional</div></div>
+        <div class="source-item"><div class="name">El Pa&iacute;s</div><div class="cat">Espa&ntilde;a</div></div>
+        <div class="source-item"><div class="name">El Mundo</div><div class="cat">Espa&ntilde;a</div></div>
+        <div class="source-item"><div class="name">ABC Espa&ntilde;a</div><div class="cat">Espa&ntilde;a</div></div>
+        <div class="source-item"><div class="name">Clar&iacute;n</div><div class="cat">Am&eacute;rica Latina</div></div>
+        <div class="source-item"><div class="name">The Guardian</div><div class="cat">Generalista</div></div>
+        <div class="source-item"><div class="name">NPR World</div><div class="cat">Generalista</div></div>
+        <div class="source-item"><div class="name">Infodefensa</div><div class="cat">Defensa y geopol&iacute;tica</div></div>
+      </div>
+      <h3>Verificaci&oacute;n externa</h3>
+      <ul>
+        <li>Google Fact Check API &mdash; AFP Fact Check, Maldita.es, Newtral, PolitiFact, Snopes, Reuters</li>
+      </ul>
+      <h3>An&aacute;lisis</h3>
+      <ul>
+        <li>GDELT Global Knowledge Graph &mdash; 13.000+ registros diarios</li>
+        <li>Groq (Llama 3.1) &mdash; An&aacute;lisis de coherencia entre fuentes</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="mailto:newsradar@viajeinteligencia.com">newsradar@viajeinteligencia.com</a> &middot; <a href="https://t.me/newsradarverificabot" target="_blank">@newsradarverificabot</a> &middot; Datos en tiempo real &middot; Sin IA en veredictos
+  </div>
+</div>
+
+<script>
+var savedTheme = localStorage.getItem('theme');
+if (savedTheme === 'light') document.body.classList.add('light');
+function toggleTheme() {
+  document.body.classList.toggle('light');
+  localStorage.setItem('theme', document.body.classList.contains('light') ? 'light' : 'dark');
+}
+</script>
+<script>
+var A = './api';
+
+function switchTab(name) {
+  var tabs = document.querySelectorAll('.tab');
+  var contents = document.querySelectorAll('.tab-content');
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
+  for (var i = 0; i < contents.length; i++) contents[i].classList.remove('active');
+  document.getElementById('tabBtn-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+async function loadStats() {
+  try {
+    var r = await fetch(A + '/stats'), d = await r.json();
+    if (!d.ok) return;
+    var s = d.stats;
+    document.getElementById('stTotal').textContent = s.total || 0;
+    document.getElementById('stTrue').textContent = s.true_count || 0;
+    document.getElementById('stFalse').textContent = s.false_count || 0;
+    document.getElementById('stMis').textContent = s.misleading_count || 0;
+    document.getElementById('stPub').textContent = s.published || 0;
+    document.getElementById('stTotal2').textContent = s.total || 0;
+  } catch(e) {}
+}
+
+async function load(page) {
+  var q = document.getElementById('search').value;
+  var co = document.getElementById('fCountry').value;
+  var ca = document.getElementById('fCat').value;
+  document.getElementById('list').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando...</div>';
+
+  try {
+    var url = A + '/topics?page=' + page + '&limit=15' + '&days=' + document.getElementById('fTime').value;
+    if (q) url += '&q=' + encodeURIComponent(q);
+    if (co) url += '&country=' + co;
+    if (ca) url += '&category=' + ca;
+
+    var r = await fetch(url), d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+    render(d.topics);
+    renderPages(d.pagination);
+    if (page === 1 && !q && !co && !ca) fillFilters(d.topics);
+  } catch(e) {
+    document.getElementById('list').innerHTML = '<div class="loading" style="color:#e94560">Error: ' + e.message + '</div>';
+  }
+}
+
+function render(topics) {
+  if (!topics || !topics.length) {
+    document.getElementById('list').innerHTML = '<div class="loading">No hay verificaciones a&uacute;n</div>';
+    return;
+  }
+  var labels = {true:'VERIFICADO', false:'FALSO', misleading:'ENGA\u00d1OSO', unverified:'SIN VERIFICAR'};
+  var html = '';
+  for (var i = 0; i < topics.length; i++) {
+    var t = topics[i];
+    var v = t.verdict || 'unverified';
+    var date = t.date ? new Date(t.date).toLocaleDateString('es-ES', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '';
+    html += '<div class="topic-card"><div class="top"><span class="verdict verdict-' + v + '"><span class="dot"></span>' + labels[v] + '</span><span class="meta">' + date + (t.sources ? '<span class="sep">|</span>' + t.sources + ' fuentes' : '') + '</span></div><h3>' + esc(t.headline||'') + '</h3>';
+    if (t.summary) html += '<div class="desc">' + esc(t.summary.slice(0,180)) + '</div>';
+    html += '<div class="bottom">';
+    if (t.country && t.country !== 'global') html += '<span class="tag">' + t.country + '</span>';
+    if (t.category) html += '<span class="tag">' + t.category.charAt(0).toUpperCase() + t.category.slice(1) + '</span>';
+    if (t.source) html += '<span class="tag"><a href="' + esc(t.url||'#') + '" target="_blank">' + esc(t.source) + '</a></span>';
+    if (t.article) html += '<span class="tag"><a href="' + esc(t.article) + '" target="_blank">📰 Leer</a></span>';
+    html += '</div></div>';
+  }
+  document.getElementById('list').innerHTML = '<div class="topic-list">' + html + '</div>';
+}
+
+function renderPages(p) {
+  var el = document.getElementById('pages');
+  if (!p || p.pages <= 1) { el.innerHTML = ''; return; }
+  var h = '<button ' + (p.page <= 1 ? 'disabled' : 'onclick="load(' + (p.page-1) + ')"') + '>◀</button>';
+  for (var i = 1; i <= p.pages; i++) {
+    if (i === p.page || i === 1 || i === p.pages || Math.abs(i - p.page) <= 2) {
+      h += '<button' + (i === p.page ? ' class="active"' : '') + ' onclick="load(' + i + ')">' + i + '</button>';
+    } else if (i === p.page - 3 || i === p.page + 3) {
+      h += '<button disabled>…</button>';
+    }
+  }
+  h += '<button ' + (p.page >= p.pages ? 'disabled' : 'onclick="load(' + (p.page+1) + ')"') + '>▶</button>';
+  el.innerHTML = h;
+}
+
+function fillFilters(topics) {
+  var co = {}, ca = {};
+  for (var i = 0; i < topics.length; i++) {
+    if (topics[i].country && topics[i].country !== 'global') co[topics[i].country] = 1;
+    if (topics[i].category) ca[topics[i].category] = 1;
+  }
+  var cEl = document.getElementById('fCountry');
+  var aEl = document.getElementById('fCat');
+  for (var c in co) { var o = document.createElement('option'); o.value = c; o.textContent = c; cEl.appendChild(o); }
+  for (var c in ca) { var o = document.createElement('option'); o.value = c; o.textContent = c.charAt(0).toUpperCase() + c.slice(1); aEl.appendChild(o); }
+}
+
+function esc(s) {
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+loadStats();
+load(1);
+</script>
+</body>
+</html>

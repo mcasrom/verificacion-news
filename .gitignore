@@ -3,3 +3,9 @@ node_modules/
 *.db
 *.db-shm
 *.db-wal
+
+# Generated
+cards/
+*.log
+npm-debug.log*
+.DS_Store
