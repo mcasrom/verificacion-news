@@ -63,13 +63,29 @@ export async function fetchRSS() {
         const link = item.link?.['@_href'] || item.link?._text || item.link || '';
         const desc = item.description?._text || item.description || item.summary || '';
         
+        // Extract image from various RSS formats
+        let image = null;
+        if (item['media:content']?.['@_url']) {
+          image = item['media:content']['@_url'];
+        } else if (item['media:thumbnail']?.['@_url']) {
+          image = item['media:thumbnail']['@_url'];
+        } else if (item.enclosure?.['@_url']) {
+          image = item.enclosure['@_url'];
+        } else if (item['media:group']) {
+          const group = Array.isArray(item['media:group']) ? item['media:group'][0] : item['media:group'];
+          if (group?.['media:content']?.['@_url']) {
+            image = group['media:content']['@_url'];
+          }
+        }
+        
         return {
           source: feed.name,
           category: feed.category,
           title: String(title).trim(),
           link: String(link).trim(),
           pubDate: item.pubDate?._text || item.pubDate || item.published || '',
-          description: String(desc).slice(0, 500).trim()
+          description: String(desc).slice(0, 500).trim(),
+          image: image || null
         };
       });
       
@@ -172,9 +188,11 @@ export function detectRSSTrending(rssItems) {
           title: g.title, 
           source: g.source, 
           link: g.link,
-          description: g.description || ''
+          description: g.description || '',
+          image: g.image || null
         })),
         link: best.link,
+        image: best.image,
         category: best.category
       });
     }

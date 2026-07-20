@@ -37,6 +37,7 @@ function initSchema() {
       trending_score REAL DEFAULT 0,
       published_telegram BOOLEAN DEFAULT 0,
       article_link TEXT,
+      image_url TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -51,8 +52,8 @@ export function insertTopic(topic) {
   const db = getDb();
   const stmt = db.prepare(`
     INSERT OR IGNORE INTO topics 
-    (hash, headline, summary, sources_count, source_names, factcheck_verdict, factcheck_source, factcheck_url, risk_signal, country, topic_category, trending_score, article_link)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (hash, headline, summary, sources_count, source_names, factcheck_verdict, factcheck_source, factcheck_url, risk_signal, country, topic_category, trending_score, article_link, image_url)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   return stmt.run(
     topic.hash,
@@ -67,7 +68,8 @@ export function insertTopic(topic) {
     topic.country || 'global',
     topic.topicCategory || null,
     topic.trendingScore || 0,
-    topic.articleLink || null
+    topic.articleLink || null,
+    topic.imageUrl || null
   );
 }
 

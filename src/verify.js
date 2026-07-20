@@ -46,7 +46,8 @@ export async function processTrendingTopics(trending, gdeltData, rssItems, factC
       country: detectCountry(topic.theme),
       topicCategory: topic.category || categorizeTopic(topic.theme),
       trendingScore: topic.score,
-      articleLink: topic.link || null
+      articleLink: topic.link || null,
+      imageUrl: topic.image || null
     };
     
     insertTopic(topicData);
