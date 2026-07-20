@@ -94,20 +94,18 @@ async function runCycle() {
 
 async function main() {
   console.log('=== NewsRadar - Verificación de Noticias ===');
-  console.log(`Interval: ${CONFIG.runInterval} minutes`);
   console.log(`FactCheck API: ${CONFIG.factCheckApiKey ? 'Configured' : 'NOT SET'}`);
   console.log(`Telegram: ${CONFIG.telegramBotToken ? 'Configured' : 'NOT SET'}`);
   console.log('');
   
-  if (process.argv.includes('--run-now')) {
-    await runCycle();
-    process.exit(0);
-  }
-  
-  console.log('Starting continuous mode...\n');
   await runCycle();
   
-  setInterval(runCycle, CONFIG.runInterval * 60 * 1000);
+  if (process.argv.includes('--continuous')) {
+    console.log('Continuous mode - running every ' + CONFIG.runInterval + ' min\n');
+    setInterval(runCycle, CONFIG.runInterval * 60 * 1000);
+  } else {
+    process.exit(0);
+  }
 }
 
 main();
