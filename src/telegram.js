@@ -56,27 +56,40 @@ function formatMessage(topic) {
     : topic.risk_signal || '⚪ SIN VERIFICAR';
   
   let msg = `📰 <b>${topic.headline}</b>\n\n`;
+  
+  if (topic.summary && topic.summary !== topic.headline) {
+    msg += `<i>${topic.summary.slice(0, 200)}</i>\n\n`;
+  }
+  
   msg += `Estado: ${status}\n`;
   
   if (topic.factcheck_source) {
-    msg += `Fuente verificación: ${topic.factcheck_source}\n`;
+    msg += `Verificado por: ${topic.factcheck_source}\n`;
   }
   
   if (topic.factcheck_url) {
-    msg += `🔗 ${topic.factcheck_url}\n`;
+    msg += `🔗 Verificación: ${topic.factcheck_url}\n`;
   }
   
-  msg += `\n📊 ${topic.sources_count} medios cubren este tema`;
+  if (topic.article_link) {
+    msg += `📰 Noticia: ${topic.article_link}\n`;
+  }
   
-  if (topic.topic_category) {
-    msg += ` | Categoría: ${topic.topic_category}`;
+  msg += `\n📊 ${topic.sources_count} fuentes`;
+  
+  if (topic.source_names) {
+    msg += ` (${topic.source_names})`;
+  }
+  
+  if (topic.topic_category && topic.topic_category !== 'general') {
+    msg += ` | ${topic.topic_category}`;
   }
   
   if (topic.country && topic.country !== 'global') {
-    msg += ` | País: ${topic.country}`;
+    msg += ` | ${topic.country}`;
   }
   
-  msg += `\n\n<i>Verificado automáticamente - Fuentes: FactCheck API + GDELT + RSS</i>`;
+  msg += `\n\n<i>Verificado automáticamente</i>`;
   
   return msg;
 }

@@ -36,16 +36,17 @@ export async function processTrendingTopics(trending, gdeltData, rssItems, factC
     const topicData = {
       hash,
       headline: topic.theme,
-      summary: `Trending in ${topic.uniqueSources} sources`,
+      summary: topic.summary || `Trending in ${topic.uniqueSources} sources`,
       sourcesCount: topic.uniqueSources,
-      sourceNames: topic.theme,
+      sourceNames: [...new Set(topic.relatedItems?.map(i => i.source) || [])].join(', '),
       factcheckVerdict: factcheck?.verdict || null,
       factcheckSource: factcheck?.source || null,
       factcheckUrl: factcheck?.url || null,
       riskSignal,
       country: detectCountry(topic.theme),
-      topicCategory: categorizeTopic(topic.theme),
-      trendingScore: topic.score
+      topicCategory: topic.category || categorizeTopic(topic.theme),
+      trendingScore: topic.score,
+      articleLink: topic.link || null
     };
     
     insertTopic(topicData);

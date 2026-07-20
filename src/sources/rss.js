@@ -123,44 +123,62 @@ function calculateSimilarity(a, b) {
 export function detectRSSTrending(rssItems) {
   const STOP_WORDS = new Set(['the','and','for','that','with','this','from','have','are','was','were','been','has','its','not','but','can','will','into','over','after','says','new','two','may','first','last','year','time','people','world','city','state','country','government','president','minister','official','according','report']);
   
-  const keywordCount = {};
-  const keywordItems = {};
+  const headlines = rssItems
+    .filter(item => item.title && item.title.length > 15)
+    .map(item => ({
+      ...item,
+      words: new Set(
+        item.title.toLowerCase()
+          .replace(/[^\w\sáéíóúñ]/g, '')
+          .split(/\s+/)
+          .filter(w => w.length > 3 && !STOP_WORDS.has(w))
+      )
+    }));
   
-  for (const item of rssItems) {
-    if (!item.title) continue;
-    
-    const words = item.title.toLowerCase()
-      .replace(/[^\w\s]/g, '')
-      .split(/\s+/)
-      .filter(w => w.length > 3 && !STOP_WORDS.has(w));
-    
-    const uniqueWords = [...new Set(words)];
-    
-    for (const word of uniqueWords) {
-      if (!keywordCount[word]) {
-        keywordCount[word] = 0;
-        keywordItems[word] = [];
-      }
-      keywordCount[word]++;
-      keywordItems[word].push(item);
-    }
-  }
+  const groups = [];
+  const used = new Set();
   
-  const topics = [];
-  for (const [keyword, count] of Object.entries(keywordCount)) {
-    if (count >= 3) {
-      const items = keywordItems[keyword];
-      const sources = new Set(items.map(i => i.source));
+  for (let i = 0; i < headlines.length; i++) {
+    if (used.has(i)) continue;
+    
+    const group = [headlines[i]];
+    used.add(i);
+    
+    for (let j = i + 1; j < headlines.length; j++) {
+      if (used.has(j)) continue;
       
-      topics.push({
-        theme: keyword.charAt(0).toUpperCase() + keyword.slice(1),
-        count,
+      const overlap = [...headlines[i].words].filter(w => headlines[j].words.has(w)).length;
+      const minWords = Math.min(headlines[i].words.size, headlines[j].words.size);
+      
+      if (minWords > 0 && overlap / minWords > 0.4) {
+        group.push(headlines[j]);
+        used.add(j);
+      }
+    }
+    
+    if (group.length >= 2) {
+      const sources = new Set(group.map(g => g.source));
+      const best = group.sort((a, b) => b.title.length - a.title.length)[0];
+      
+      groups.push({
+        theme: best.title,
+        summary: group.length > 2 
+          ? `${group.length} medios cubren: ${best.title}` 
+          : group.map(g => `${g.source}: ${g.title}`).join(' | '),
+        count: group.length,
         uniqueSources: sources.size,
-        score: count * sources.size,
-        relatedItems: items.slice(0, 5).map(i => ({ title: i.title, source: i.source, link: i.link }))
+        score: group.length * sources.size,
+        relatedItems: group.map(g => ({ 
+          title: g.title, 
+          source: g.source, 
+          link: g.link,
+          description: g.description || ''
+        })),
+        link: best.link,
+        category: best.category
       });
     }
   }
   
-  return topics.sort((a, b) => b.score - a.score).slice(0, 20);
+  return groups.sort((a, b) => b.score - a.score).slice(0, 15);
 }
