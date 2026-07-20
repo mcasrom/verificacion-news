@@ -87,7 +87,8 @@ export async function postWeeklySummary(botToken, channelId) {
     msg += '   \uD83D\uDCCA ' + (t.sources_count || 1) + ' fuentes\n\n';
   }
 
-  msg += '\n<i>@newsradarverifica</i>';
+  msg += '\n\n\ud83d\udd17 <a href="https://viajeinteligencia.com/verifica/">viajeinteligencia.com/verifica</a>';
+  msg += '\n\n<i>@newsradarverifica</i>';
 
   try {
     const resp = await fetch(TELEGRAM_API + '/bot' + botToken + '/sendMessage', {
