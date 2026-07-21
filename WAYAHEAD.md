@@ -218,19 +218,6 @@ y el umbral sources_count >= 3 dejaba fuera 27 temas con 1-2 fuentes.
 - SQLite visits.db con sesiones unicas (localStorage + UUID)
 - Tarjeta "Visitas" en los KPIS del dashboard
 
-### Pendiente (Sprint 2 - esfuerzo medio)
-- [ ] Widget embed (iframe) para que otros medios incrusten verificaciones
-- [ ] OG image dinamica por cada verificacion (tarjeta compartible)
-- [ ] Publicacion automatica a X (Twitter) de cada nuevo topic
-- [ ] Lista de correo semanal (capturar emails desde landing)
-
-### Pendiente (Sprint 3 - esfuerzo alto)
-- [ ] API publica documentada para terceros
-- [ ] Badge "Verificado por NewsRadar" (sello PNG descargable)
-- [ ] Email outreach a medios/fact-checkers
-
-## Sprint 2 — Promocion y visibilidad (2026-07-21)
-
 ### Implementado
 
 #### Widget embed (iframe)
@@ -265,3 +252,31 @@ y el umbral sources_count >= 3 dejaba fuera 27 temas con 1-2 fuentes.
 - [ ] API publica documentada para terceros
 - [ ] Badge "Verificado por NewsRadar" (sello PNG descargable)
 - [ ] Email outreach a medios/fact-checkers
+
+## Pendiente global
+
+### Sprint 3 — Redes sociales alternativas
+- [ ] Crear cuenta Bluesky (@newsradarverifica.bsky.social) + bot automatico
+- [ ] Crear cuenta Mastodon (@newsradar@masto.es) + bot automatico
+- [ ] Publicacion automatica a Bluesky y Mastodon de cada nuevo topic
+
+### Sprint 4 — Datos y desarrollo
+- [ ] API publica documentada para terceros (endpoints, auth, rate-limit)
+- [ ] Lista de correo semanal (capturar emails desde landing page)
+- [ ] OG image dinamica por cada verificacion (tarjeta compartible al compartir enlace)
+- [ ] Badge "Verificado por NewsRadar" (sello PNG descargable para sitios externos)
+
+### Sprint 5 — Outreach y comunidad
+- [ ] Email outreach a medios pequenos y fact-checkers (Maldita.es, Newtral, etc.)
+- [ ] Publicar casos de desinformacion detectados como blog/changelog publico
+- [ ] Incluir NewsRadar en directorios OSINT y herramientas de verificacion
+
+### Sprint 6 — Calidad y consolidacion
+- [ ] Filtro de calidad para no publicar Topics de 1 sola fuente ni topics climaticos/deportivos
+- [ ] Dashboard de metricas semanales (topics publicados, alcance Telegram, visitas web)
+- [ ] Cobertura de test para src/ (al menos db.js y telegram.js)
+- [ ] CI/CD basico (lint + typecheck en GitHub Actions)
+
+### Descartado
+- X (Twitter) API: desde Feb 2026 no existe free tier. Pay-per-use: $0.20/post con URL.
+  No se implementa publicacion automatica por coste ni por decision del proyecto.
