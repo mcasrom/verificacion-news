@@ -228,3 +228,40 @@ y el umbral sources_count >= 3 dejaba fuera 27 temas con 1-2 fuentes.
 - [ ] API publica documentada para terceros
 - [ ] Badge "Verificado por NewsRadar" (sello PNG descargable)
 - [ ] Email outreach a medios/fact-checkers
+
+## Sprint 2 — Promocion y visibilidad (2026-07-21)
+
+### Implementado
+
+#### Widget embed (iframe)
+- Endpoint: GET /embed
+- Parametros: ?theme=light|dark, ?days=N
+- Diseno limpio, responsivo, listo para iframe
+- Incluye ultimas 10 verificaciones con verdictos y metadata
+- Enlace "Widget" en el header de /verifica/
+- Uso: <iframe src="https://viajeinteligencia.com/verifica/embed" width="100%" height="400"></iframe>
+
+#### OG image y SEO
+- Sitemap actualizado con /verifica/ (daily, priority 0.8)
+- OG preview SVG ya existente y funcional
+- Meta tags OG en el HTML
+
+### Decisiones tomadas
+
+#### X/Twitter descartado
+- Verificado: desde Feb 2026 X API no tiene free tier para nuevos desarrolladores
+- Pricing: $0.015/post sin link, $0.20/post con link, lectura $0.005/lectura
+- Solo hay pay-per-use con cap de 2M lecturas/mes, o Enterprise desde $42K/mes
+- No se implementa publicacion automatica a X por coste y decision del proyecto
+
+#### Alternativas sin cargo
+- Bluesky: API abierta gratuita, mismo patron que el bot Telegram
+- Mastodon: API de ActivityPub gratuita, instancias hispanas disponibles
+- Nombres sugeridos: @newsradarverifica.bsky.social y @newsradar@masto.es
+
+### Pendiente (Sprint 3)
+- [ ] Crear cuenta Bluesky + bot automatico
+- [ ] Crear cuenta Mastodon + bot automatico
+- [ ] API publica documentada para terceros
+- [ ] Badge "Verificado por NewsRadar" (sello PNG descargable)
+- [ ] Email outreach a medios/fact-checkers

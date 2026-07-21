@@ -83,6 +83,39 @@ app.get('/api/topics/:id', (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// Embed widget (iframe)
+app.get('/embed', (req, res) => {
+  try {
+    const d = getDb();
+    const days = parseInt(req.query.days) || 3;
+    const items = d.prepare("SELECT id,headline,improved_headline,summary,factcheck_verdict,factcheck_source,sources_count,country,first_seen FROM topics WHERE first_seen >= datetime('now', '-" + days + " days') ORDER BY trending_score DESC, first_seen DESC LIMIT 10").all();
+    const theme = req.query.theme || 'dark';
+    const bg = theme === 'light' ? '#f5f5f5' : '#070712';
+    const cardBg = theme === 'light' ? '#e0e0e0' : '#0f0f24';
+    const text = theme === 'light' ? '#1a1a1a' : '#e0e0e0';
+    const text2 = theme === 'light' ? '#555' : '#888';
+    const border = theme === 'light' ? '#ccc' : '#1e1e3a';
+    const accent = '#e94560';
+    const labels = {false:'FALSO', true:'VERIFICADO', misleading:'ENGAÑOSO'};
+    const colors = {false:'#e94560', true:'#2ecc71', misleading:'#f39c12'};
+    let rows = '';
+    for (const item of items) {
+      const hl = (item.improved_headline || item.headline || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const v = item.factcheck_verdict || 'unverified';
+      const vLabel = labels[v] || 'SIN VERIFICAR';
+      const vColor = colors[v] || '#888';
+      const date = item.first_seen ? item.first_seen.slice(5, 10) : '';
+      rows += '<div style="padding:10px 12px;border-bottom:1px solid ' + border + ';font-size:13px;display:flex;align-items:flex-start;gap:8px">'
+        + '<span style="background:' + vColor + '20;color:' + vColor + ';padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;white-space:nowrap;flex-shrink:0;line-height:18px">' + vLabel + '</span>'
+        + '<div><div style="color:' + text + ';font-weight:600;line-height:1.3">' + hl + '</div>'
+        + '<div style="color:' + text2 + ';font-size:11px;margin-top:2px">' + date + ' · ' + (item.sources_count||1) + ' fuentes' + (item.country && item.country !== 'global' ? ' · ' + item.country : '') + '</div></div></div>';
+    }
+    if (!rows) rows = '<div style="text-align:center;padding:30px;color:' + text2 + ';font-size:13px">No hay verificaciones recientes</div>';
+    const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,-apple-system,sans-serif;background:' + bg + ';color:' + text + '}a{color:' + accent + ';text-decoration:none}.hdr{padding:12px;border-bottom:1px solid ' + border + ';display:flex;justify-content:space-between;align-items:center}.hdr h1{font-size:14px;font-weight:700}.hdr a{font-size:11px}.ftr{text-align:center;padding:10px;font-size:11px;color:' + text2 + '}</style></head><body><div class="hdr"><h1>NewsRadar Verifica</h1><a href="https://viajeinteligencia.com/verifica/" target="_blank">Ver todas →</a></div>' + rows + '<div class="ftr">Datos actualizados cada hora · Sin IA en veredictos</div></body></html>';
+    res.send(html);
+  } catch (e) { res.status(500).send('Error'); }
+});
+
 // RSS feed
 app.get('/api/feed.rss', (req, res) => {
   try {
