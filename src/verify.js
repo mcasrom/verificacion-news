@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { insertTopic, updateTopicSources, getDb } from './db.js';
 import { searchFactCheck, buildFactCheckQuery } from './sources/factcheck.js';
+import { extractClaim, analyzeCoherence } from './gemini.js';
 
 export function generateHash(headline) {
   const normalized = headline.toLowerCase().replace(/[^\w\s\xe1\xe9\xed\xf3\xfa\xf1]/gi, ' ').replace(/\s+/g, ' ').trim();
@@ -119,8 +120,37 @@ export async function processTrendingTopics(trending, gdeltData, rssItems, factC
       continue;
     }
 
-    const factcheck = await searchFactCheck(buildFactCheckQuery(topic.theme), factCheckApiKey);
-    const riskSignal = assessRisk(topic, factcheck, rssItems, gdeltData);
+    let factcheck = await searchFactCheck(buildFactCheckQuery(topic.theme), factCheckApiKey);
+
+    if (!factcheck && process.env.GROQ_API_KEY) {
+      const extracted = await extractClaim(topic.theme, topic.summary, null, process.env.GROQ_API_KEY);
+      if (extracted && extracted.query) {
+        factcheck = await searchFactCheck(extracted.query, factCheckApiKey);
+      }
+      if (!factcheck && extracted && extracted.keywords) {
+        for (const kw of extracted.keywords) {
+          factcheck = await searchFactCheck(kw, factCheckApiKey);
+          if (factcheck) break;
+        }
+      }
+    }
+
+    let riskSignal = assessRisk(topic, factcheck, rssItems, gdeltData);
+
+    if (topic.relatedItems && topic.relatedItems.length >= 2 && process.env.GROQ_API_KEY) {
+      try {
+        const coherence = await analyzeCoherence(topic.theme, topic.relatedItems.slice(0, 5), process.env.GROQ_API_KEY);
+        if (coherence && coherence.contradictions) {
+          riskSignal = 'CONTRADICCION - ' + (coherence.contradictionDetails || 'Fuentes se contradicen entre si').slice(0, 100);
+        }
+        if (coherence && coherence.flaggedClaims && coherence.flaggedClaims.length > 0 && !factcheck) {
+          for (const claim of coherence.flaggedClaims.slice(0, 2)) {
+            const fc = await searchFactCheck(claim, factCheckApiKey);
+            if (fc) { factcheck = fc; break; }
+          }
+        }
+      } catch (e) {}
+    }
 
     const topicData = {
       hash,
