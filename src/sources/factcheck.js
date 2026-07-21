@@ -54,7 +54,7 @@ function mapRating(rating) {
   
   const lower = rating.toLowerCase();
   
-  if (lower.includes('falso') || lower.includes('false') || lower.includes('fake') || lower.includes('pinocchio')) {
+  if (lower.includes('falso') || lower.includes('false') || lower.includes('fake') || lower.includes('pinocchio') || lower.includes('unfounded') || lower.includes('hoax') || lower.includes('no evidence') || lower.includes('baseless') || lower.includes('not true') || lower.includes('incorrect')) {
     return 'false';
   }
   if (lower.includes('verdadero') || lower.includes('true') || lower.includes('correct') || lower.includes('confirmed')) {
