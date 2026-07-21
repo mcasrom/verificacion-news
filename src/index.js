@@ -125,7 +125,7 @@ async function runCycle() {
     console.log('  New topics: ' + processed.length);
 
     console.log('[4/5] Improving content with Groq...');
-    const unsent = getUnpublishedTopics(5);
+    const unsent = getUnpublishedTopics(15);
     let improvedCount = 0;
 
     if (unsent.length > 0 && CONFIG.groqApiKey) {

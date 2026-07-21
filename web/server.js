@@ -2,9 +2,11 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import Database from 'better-sqlite3';
+import { randomUUID } from 'crypto';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.join(__dirname, '..', 'newsradar.db');
+const VISITS_PATH = path.join(__dirname, '..', 'visits.db');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
 const app = express();
@@ -18,6 +20,18 @@ function getDb() {
   }
   return db;
 }
+
+let vdb;
+function getVisitsDb() {
+  if (!vdb) {
+    vdb = new Database(VISITS_PATH);
+    vdb.pragma('journal_mode = WAL');
+    vdb.exec("CREATE TABLE IF NOT EXISTS visits (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT UNIQUE, first_seen DATETIME DEFAULT CURRENT_TIMESTAMP, last_seen DATETIME DEFAULT CURRENT_TIMESTAMP)");
+  }
+  return vdb;
+}
+
+app.use(express.json());
 
 app.get('/api/stats', (req, res) => {
   try {
@@ -66,6 +80,54 @@ app.get('/api/topics/:id', (req, res) => {
     const t = d.prepare('SELECT * FROM topics WHERE id = ?').get(req.params.id);
     if (!t) return res.status(404).json({ ok: false, error: 'Not found' });
     res.json({ ok: true, topic: t });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// RSS feed
+app.get('/api/feed.rss', (req, res) => {
+  try {
+    const d = getDb();
+    const days = parseInt(req.query.days) || 7;
+    const items = d.prepare("SELECT id,headline,improved_headline,summary,improved_summary,factcheck_verdict,factcheck_source,factcheck_url,sources_count,country,first_seen FROM topics WHERE first_seen >= datetime('now', '-" + days + " days') ORDER BY first_seen DESC LIMIT 30").all();
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n<channel>\n<title>NewsRadar Verifica</title>\n<link>https://viajeinteligencia.com/verifica/</link>\n<description>Verificacion automatica de noticias - 13 fuentes RSS + GDELT + Google Fact Check</description>\n<language>es</language>\n<atom:link href="https://viajeinteligencia.com/verifica/api/feed.rss" rel="self" type="application/rss+xml"/>\n';
+    for (const item of items) {
+      const verdicts = {false:'FALSO', true:'VERIFICADO', misleading:'ENGAÑOSO'};
+      const v = item.factcheck_verdict ? ' [' + (verdicts[item.factcheck_verdict] || item.factcheck_verdict) + ']' : '';
+      const hl = (item.improved_headline || item.headline || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      const summary = (item.improved_summary || item.summary || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const url = 'https://viajeinteligencia.com/verifica/';
+      const date = item.first_seen ? new Date(item.first_seen + 'Z').toUTCString() : new Date().toUTCString();
+      xml += '<item>\n<title>' + hl + v + '</title>\n<link>' + url + '</link>\n<guid isPermaLink="false">newsradar-' + item.id + '</guid>\n<description>' + (summary || hl) + '</description>\n<pubDate>' + date + '</pubDate>\n<source>' + (item.factcheck_source || 'NewsRadar') + '</source>\n</item>\n';
+    }
+    xml += '</channel>\n</rss>';
+    res.set('Content-Type', 'application/rss+xml; charset=utf-8');
+    res.send(xml);
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Visitor counter
+app.post('/api/visit', (req, res) => {
+  try {
+    const v = getVisitsDb();
+    const sessionId = req.body.sessionId || randomUUID();
+    const existing = v.prepare('SELECT id FROM visits WHERE session_id = ?').get(sessionId);
+    if (existing) {
+      v.prepare('UPDATE visits SET last_seen = CURRENT_TIMESTAMP WHERE session_id = ?').run(sessionId);
+    } else {
+      v.prepare('INSERT OR IGNORE INTO visits (session_id) VALUES (?)').run(sessionId);
+    }
+    const total = v.prepare('SELECT COUNT(DISTINCT session_id) as count FROM visits').get();
+    const today = v.prepare("SELECT COUNT(DISTINCT session_id) as count FROM visits WHERE date(last_seen) = date('now')").get();
+    res.json({ ok: true, total: total.count, today: today.count });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.get('/api/visits', (req, res) => {
+  try {
+    const v = getVisitsDb();
+    const total = v.prepare('SELECT COUNT(DISTINCT session_id) as count FROM visits').get();
+    const today = v.prepare("SELECT COUNT(DISTINCT session_id) as count FROM visits WHERE date(last_seen) = date('now')").get();
+    res.json({ ok: true, total: total.count, today: today.count });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 

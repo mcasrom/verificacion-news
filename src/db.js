@@ -108,7 +108,7 @@ export function getUnpublishedTopics(limit = 10) {
   return db.prepare(`
     SELECT * FROM topics
     WHERE published_telegram = 0
-    AND (factcheck_verdict IS NOT NULL OR sources_count >= 3)
+    AND (factcheck_verdict IS NOT NULL OR sources_count >= 2)
     ORDER BY trending_score DESC, sources_count DESC
     LIMIT ?
   `).all(limit);

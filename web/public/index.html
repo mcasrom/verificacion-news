@@ -84,6 +84,18 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:
 .loading{text-align:center;padding:60px 0;color:var(--text3)}
 .loading .spinner{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
 @keyframes spin{to{transform:rotate(360deg)}}
+.promo-bar{text-align:center;padding:16px 0 6px;display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;border-top:1px solid var(--border);margin-top:24px}
+.promo-label{color:var(--text3);font-size:10px;letter-spacing:1px;text-transform:uppercase}
+.promo-link{color:var(--text2);font-size:12px;text-decoration:none;transition:color .2s}
+.promo-link:hover{color:var(--accent)}
+.promo-dot{color:var(--text3);font-size:10px}
+.header-links{text-align:center;margin-top:8px}
+.rss-link{display:inline-block;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:4px 14px;color:var(--accent);font-size:11px;font-weight:600;text-decoration:none;letter-spacing:.5px;transition:all .2s}
+.rss-link:hover{background:var(--accent)15;border-color:var(--accent)}
+.share-bar{text-align:center;padding:20px 0 8px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.share-label{color:var(--text3);font-size:10px;letter-spacing:1px;text-transform:uppercase}
+.share-btn{background:var(--bg2);border:1px solid var(--border);border-radius:50%;width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2);font-size:11px;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;transition:all .2s;text-decoration:none}
+.share-btn:hover{background:var(--accent)15;border-color:var(--accent);color:var(--accent)}
 .footer{text-align:center;padding:40px 0 20px;color:var(--text3);font-size:12px}
 .footer a{color:var(--text3);text-decoration:none}
 .footer a:hover{color:var(--accent)}
@@ -106,6 +118,7 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:
     <div class="sub">VERIFICACI&Oacute;N AUTOM&Aacute;TICA DE NOTICIAS</div>
     <div class="desc">Analizamos m&aacute;s de 13.000 fuentes globales cada hora y cruzamos con fact-checkers para detectar desinformaci&oacute;n. Sin IA en decisiones de veracidad.</div>
     <div class="badge">BBC &middot; Al Jazeera &middot; France24 &middot; DW &middot; El Pa&iacute;s &middot; The Guardian &middot; Infodefensa &middot; AFP &middot; Google Fact Check</div>
+    <div class="header-links"><a href="./api/feed.rss" target="_blank" class="rss-link" title="Feed RSS de verificaciones">RSS Feed</a></div>
   </div>
 
 <div style="text-align:center;margin-top:12px"><button onclick="toggleTheme()" style="background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:6px 16px;color:var(--text);font-size:12px;cursor:pointer;font-family:Inter,sans-serif">☾ Cambiar tema</button></div>
@@ -123,6 +136,7 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:
       <div class="stat-card" style="--c:#e94560"><div class="glow"></div><div class="num"><span id="stFalse">-</span></div><div class="label">Desmentidos</div></div>
       <div class="stat-card" style="--c:#f39c12"><div class="glow"></div><div class="num"><span id="stMis">-</span></div><div class="label">Dudosos</div></div>
       <div class="stat-card" style="--c:#888"><div class="glow"></div><div class="num"><span id="stPub">-</span><span style="font-size:16px;opacity:.6"> / <span id="stTotal2">-</span></span></div><div class="label">Publicados</div></div>
+      <div class="stat-card" style="--c:#67E8F9"><div class="glow"></div><div class="num"><span id="stVisits">-</span></div><div class="label">Visitas</div></div>
     </div>
     <div class="filters">
       <input type="text" id="search" placeholder="Buscar tema..." oninput="load(1)">
@@ -195,8 +209,30 @@ body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:
     </div>
   </div>
 
+  <div class="promo-bar">
+    <span class="promo-label">Ecosistema OSINT:</span>
+    <a href="https://emergency.viajeinteligencia.com" target="_blank" rel="noopener" class="promo-link">Emergencias</a>
+    <span class="promo-dot">·</span>
+    <a href="https://georisk.viajeinteligencia.com" target="_blank" rel="noopener" class="promo-link">GeoRisk</a>
+    <span class="promo-dot">·</span>
+    <a href="https://corrupcion.viajeinteligencia.com" target="_blank" rel="noopener" class="promo-link">Corrupción</a>
+    <span class="promo-dot">·</span>
+    <a href="https://security.viajeinteligencia.com" target="_blank" rel="noopener" class="promo-link">SIEG Security</a>
+    <span class="promo-dot">·</span>
+    <a href="https://status.viajeinteligencia.com" target="_blank" rel="noopener" class="promo-link">Estado</a>
+  </div>
+
+  <div class="share-bar">
+    <span class="share-label">Compartir:</span>
+    <button class="share-btn" onclick="shareLink('twitter')" aria-label="Compartir en X">X</button>
+    <button class="share-btn" onclick="shareLink('whatsapp')" aria-label="Compartir en WhatsApp">WA</button>
+    <button class="share-btn" onclick="shareLink('telegram')" aria-label="Compartir en Telegram">TG</button>
+    <button class="share-btn" onclick="shareLink('facebook')" aria-label="Compartir en Facebook">fb</button>
+    <button class="share-btn" onclick="shareNative()" aria-label="Compartir">++</button>
+  </div>
+
   <div class="footer">
-    <a href="mailto:newsradar@viajeinteligencia.com">newsradar@viajeinteligencia.com</a> &middot; <a href="https://t.me/newsradarverificabot" target="_blank">@newsradarverificabot</a> &middot; Datos en tiempo real &middot; Sin IA en veredictos
+    <a href="mailto:newsradar@viajeinteligencia.com">✉ newsradar@viajeinteligencia.com</a> &middot; <a href="https://t.me/newsradarverificabot" target="_blank">🤖 @newsradarverificabot</a> &middot; Datos en tiempo real &middot; Sin IA en veredictos
   </div>
 </div>
 
@@ -310,6 +346,27 @@ function esc(s) {
   var d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
+}
+
+// Visit counter
+var sid = localStorage.getItem("nr_session");
+if (!sid) { sid = crypto.randomUUID(); localStorage.setItem("nr_session", sid); }
+fetch("./api/visit", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({sessionId:sid}) })
+  .then(function(r){return r.json()})
+  .then(function(d){if(d.ok) document.getElementById("stVisits").textContent = d.total;})
+  .catch(function(){});
+
+// Sharing
+function shareNative() {
+  if (navigator.share) {
+    navigator.share({title:"NewsRadar Verifica", text:"Verificacion automatica de noticias - Sin IA en veredictos", url:window.location.href});
+  } else { shareLink("twitter"); }
+}
+function shareLink(platform) {
+  var url = encodeURIComponent(window.location.href);
+  var text = encodeURIComponent("NewsRadar Verifica - Verificacion automatica de noticias");
+  var links = {twitter:"https://twitter.com/intent/tweet?text="+text+"&url="+url, whatsapp:"https://wa.me/?text="+text+"%20"+url, telegram:"https://t.me/share/url?url="+url+"&text="+text, facebook:"https://www.facebook.com/sharer/sharer.php?u="+url};
+  window.open(links[platform], "_blank", "width=600,height=400");
 }
 
 loadStats();
